@@ -1,0 +1,8 @@
+{
+  "name": "LMS VRT - EGA - Premium Learning Platform",
+  "description": "A high-end Learning Management System designed for entrepreneurs, featuring role-based access control, progress tracking, community forums, and AI-powered learning assistance.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
