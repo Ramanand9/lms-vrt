@@ -10,3 +10,15 @@ export interface AnnouncementResponse {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface AnnouncementEmailDeliveryResponse {
+  enabled: boolean;
+  attempted: number;
+  sent: number;
+  failed: number;
+}
+
+export interface CreateAnnouncementResponse {
+  announcement: AnnouncementResponse;
+  emailDelivery: AnnouncementEmailDeliveryResponse;
+}

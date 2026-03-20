@@ -106,12 +106,22 @@ const Community: React.FC = () => {
         message: announcementForm.message,
       });
 
-      setAnnouncements((prev) => [created, ...prev]);
+      setAnnouncements((prev) => [created.announcement, ...prev]);
       setAnnouncementForm({
         title: '',
         message: '',
       });
-      setNotice('Announcement posted.');
+
+      if (!created.emailDelivery.enabled) {
+        setNotice(
+          'Announcement posted. Email automation is disabled (SMTP is not configured).',
+        );
+        return;
+      }
+
+      setNotice(
+        `Announcement posted. Email delivery: sent ${created.emailDelivery.sent}, failed ${created.emailDelivery.failed}.`,
+      );
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     } finally {

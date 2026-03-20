@@ -5,13 +5,15 @@ import {
   Navigate,
   Route,
   Routes,
+  useLocation,
 } from 'react-router-dom';
 import { LMSProvider, useLMS } from './store';
 import { UserRole } from './types';
 import Layout from './components/Layout';
 import Dashboard from './screens/Dashboard';
 import CoursePlayer from './screens/CoursePlayer';
-import AdminPanel from './screens/AdminPanel';
+import AdminCourses from './screens/AdminCourses';
+import AdminAccess from './screens/AdminAccess';
 import Community from './screens/Community';
 import AIAdvisor from './screens/AIAdvisor';
 import Profile from './screens/Profile';
@@ -265,9 +267,10 @@ const LoadingScreen: React.FC = () => (
 
 const AuthRoute: React.FC = () => {
   const { currentUser } = useLMS();
+  const location = useLocation();
 
   if (currentUser) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={`/${location.search}`} replace />;
   }
 
   return <AuthScreen defaultMode="login" />;
@@ -275,9 +278,10 @@ const AuthRoute: React.FC = () => {
 
 const SignupRoute: React.FC = () => {
   const { currentUser } = useLMS();
+  const location = useLocation();
 
   if (currentUser) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={`/${location.search}`} replace />;
   }
 
   return <AuthScreen defaultMode="register-student" />;
@@ -285,9 +289,10 @@ const SignupRoute: React.FC = () => {
 
 const ProtectedLayoutRoute: React.FC = () => {
   const { currentUser } = useLMS();
+  const location = useLocation();
 
   if (!currentUser) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to={`/auth${location.search}`} replace />;
   }
 
   return <Layout />;
@@ -347,7 +352,23 @@ const AppRoutes: React.FC = () => {
           path="/admin"
           element={
             <AdminOnlyRoute>
-              <AdminPanel />
+              <Navigate to="/admin/courses" replace />
+            </AdminOnlyRoute>
+          }
+        />
+        <Route
+          path="/admin/courses"
+          element={
+            <AdminOnlyRoute>
+              <AdminCourses />
+            </AdminOnlyRoute>
+          }
+        />
+        <Route
+          path="/admin/access"
+          element={
+            <AdminOnlyRoute>
+              <AdminAccess />
             </AdminOnlyRoute>
           }
         />

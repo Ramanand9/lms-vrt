@@ -2,10 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { useLMS } from '../store';
 
 const Profile: React.FC = () => {
-  const { currentUser, courses, isSaving, updateProfilePicture } = useLMS();
+  const {
+    currentUser,
+    courses,
+    isSaving,
+    updateProfilePicture,
+    changePassword,
+  } = useLMS();
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarNotice, setAvatarNotice] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordNotice, setPasswordNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setAvatarUrl(currentUser?.avatar ?? '');
@@ -17,24 +28,52 @@ const Profile: React.FC = () => {
 
   const handleSaveProfilePicture = async (event: React.FormEvent) => {
     event.preventDefault();
-    setError(null);
-    setNotice(null);
+    setAvatarError(null);
+    setAvatarNotice(null);
 
     const trimmed = avatarUrl.trim();
 
     if (!trimmed) {
-      setError('Profile picture URL is required.');
+      setAvatarError('Profile picture URL is required.');
       return;
     }
 
     const result = await updateProfilePicture(trimmed);
 
     if (!result.success) {
-      setError(result.message ?? 'Unable to update profile picture');
+      setAvatarError(result.message ?? 'Unable to update profile picture');
       return;
     }
 
-    setNotice('Profile picture updated successfully.');
+    setAvatarNotice('Profile picture updated successfully.');
+  };
+
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setPasswordError(null);
+    setPasswordNotice(null);
+
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirm password must match.');
+      return;
+    }
+
+    const result = await changePassword(currentPassword, newPassword);
+
+    if (!result.success) {
+      setPasswordError(result.message ?? 'Unable to change password');
+      return;
+    }
+
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordNotice(result.message ?? 'Password updated successfully.');
   };
 
   return (
@@ -73,15 +112,15 @@ const Profile: React.FC = () => {
           Add an image URL and save to update your account picture.
         </p>
 
-        {(error || notice) && (
+        {(avatarError || avatarNotice) && (
           <div
             className={`mb-5 rounded-2xl p-4 text-sm font-bold ${
-              error
+              avatarError
                 ? 'bg-red-50 border border-red-100 text-red-600'
                 : 'bg-green-50 border border-green-100 text-green-700'
             }`}
           >
-            {error ?? notice}
+            {avatarError ?? avatarNotice}
           </div>
         )}
 
@@ -117,6 +156,80 @@ const Profile: React.FC = () => {
             className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-nitrocrimson-600 disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save Profile Picture'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-100">
+        <h3 className="text-2xl font-black text-slate-900 mb-2">Change Password</h3>
+        <p className="text-sm text-slate-500 font-medium mb-6">
+          Use a strong password that you do not reuse on other sites.
+        </p>
+
+        {(passwordError || passwordNotice) && (
+          <div
+            className={`mb-5 rounded-2xl p-4 text-sm font-bold ${
+              passwordError
+                ? 'bg-red-50 border border-red-100 text-red-600'
+                : 'bg-green-50 border border-green-100 text-green-700'
+            }`}
+          >
+            {passwordError ?? passwordNotice}
+          </div>
+        )}
+
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              Current Password
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              autoComplete="current-password"
+              required
+              minLength={8}
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-sm text-slate-800 outline-none focus:ring-2 focus:ring-nitrocrimson-500/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-sm text-slate-800 outline-none focus:ring-2 focus:ring-nitrocrimson-500/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-bold text-sm text-slate-800 outline-none focus:ring-2 focus:ring-nitrocrimson-500/40"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="px-6 py-3 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-nitrocrimson-600 disabled:opacity-50"
+          >
+            {isSaving ? 'Saving...' : 'Update Password'}
           </button>
         </form>
       </div>

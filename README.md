@@ -8,6 +8,70 @@ This repo now runs as a full-stack LMS starter with:
 - Admin can create courses and allocate them to students
 - Students can only view courses allocated to them
 
+## 0) Quick start (run in browser locally)
+
+Use 2 terminals so frontend and backend run together.
+
+### Terminal 1 - backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+```
+
+Edit `backend/.env`:
+
+```env
+PORT=3000
+MONGODB_URI=your_mongodb_connection_string
+MONGODB_DB=lms_vrt
+JWT_SECRET=your_long_random_secret
+JWT_EXPIRES_IN=7d
+ADMIN_SETUP_KEY=adminacc
+CORS_ORIGIN=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
+# Optional: announcement email automation
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_smtp_username
+SMTP_PASS=your_smtp_password_or_app_password
+SMTP_FROM=your_from_email@example.com
+```
+
+Start backend:
+
+```bash
+npm run start:dev
+```
+
+### Terminal 2 - frontend
+
+```bash
+# from repo root
+npm install
+cp .env.example .env.local
+```
+
+Edit `.env.local`:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000/api
+# optional, only for AI advisor
+GEMINI_API_KEY=
+```
+
+Start frontend:
+
+```bash
+npm run dev
+```
+
+Open in browser: `http://localhost:5173`
+
+If MongoDB is empty, signup first, then login.
+
 ## 1) MongoDB setup
 
 You can use either local MongoDB or MongoDB Atlas.
@@ -50,6 +114,13 @@ Edit `backend/.env` and set:
 - `JWT_SECRET`
 - `ADMIN_SETUP_KEY=adminacc`
 - `CORS_ORIGIN=http://localhost:5173`
+- Optional announcement email automation (SMTP):
+  - `SMTP_HOST`
+  - `SMTP_PORT`
+  - `SMTP_SECURE`
+  - `SMTP_USER`
+  - `SMTP_PASS`
+  - `SMTP_FROM`
 
 Run backend:
 
@@ -62,7 +133,7 @@ Backend base URL: `http://localhost:3000/api`
 ## 3) Frontend setup (`/`)
 
 ```bash
-cd ..
+# from repo root
 npm install
 cp .env.example .env.local
 ```
@@ -82,6 +153,57 @@ npm run dev
 
 Frontend URL: `http://localhost:5173`
 
+## 4) Announcement Email Automation (Admin -> Students)
+
+When an admin posts a new announcement, backend can automatically email all students.
+
+### How it works
+
+- Endpoint used: `POST /api/community/announcements`
+- Backend saves the announcement in MongoDB first.
+- Backend then queries all students and sends one email per student via SMTP.
+- API response includes delivery status:
+  - `sent` (success count)
+  - `failed` (failure count)
+  - `attempted` (total recipients)
+  - `enabled` (whether SMTP config is active)
+- Admin UI shows this immediately after posting (for example: `sent 24, failed 2`).
+
+### Required SMTP env vars (`backend/.env`)
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_smtp_username
+SMTP_PASS=your_smtp_password_or_app_password
+SMTP_FROM=your_from_email@example.com
+```
+
+### Provider note (Gmail)
+
+- Use an App Password (not your normal Gmail password).
+- Keep 2FA enabled on the Gmail account.
+
+### Quick test
+
+1. Configure SMTP values in `backend/.env`.
+2. Restart backend (`npm run start:dev` in `backend`).
+3. Login as admin and open Community.
+4. Post an announcement.
+5. Check success notice for email delivery status and confirm mailbox delivery.
+
+## Common issues
+
+- CORS error:
+  Set `CORS_ORIGIN` in `backend/.env` to your frontend URL (for local: `http://localhost:5173`), then restart backend.
+- Mongo connection/auth error:
+  In MongoDB Atlas, verify DB user credentials and Network Access allowlist (for testing you can add `0.0.0.0/0`).
+- Login fails on fresh DB:
+  Create account using signup first, then login.
+- Frontend cannot call backend:
+  Ensure `.env.local` has `VITE_API_BASE_URL=http://localhost:3000/api` and restart Vite.
+
 ### Frontend routes (SPA)
 
 - `/auth` - login/register screen
@@ -93,7 +215,7 @@ Frontend URL: `http://localhost:5173`
 - `/admin` - admin-only panel
 - `/ai-advisor` - student-only AI advisor
 
-## 4) How to use the website
+## 5) How to use the website
 
 ### First-time admin setup
 
@@ -136,7 +258,7 @@ Frontend URL: `http://localhost:5173`
 2. Dashboard shows only allocated courses.
 3. Open a course to read/access details.
 
-## 5) API summary
+## 6) API summary
 
 - Auth
   - `POST /api/auth/register/student`
@@ -158,3 +280,9 @@ Frontend URL: `http://localhost:5173`
 - Student
   - `GET /api/enrollments/my-courses`
   - `GET /api/enrollments/my-courses/:courseId`
+- Community
+  - `GET /api/community/announcements`
+  - `POST /api/community/announcements` (admin, returns announcement + email delivery status)
+  - `POST /api/community/messages` (student -> admin)
+  - `GET /api/community/messages/my` (student sent messages)
+  - `GET /api/community/messages` (admin inbox)

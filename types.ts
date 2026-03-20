@@ -32,12 +32,18 @@ export interface CourseSubsection {
   title: string;
   description?: string;
   videoUrl: string;
+  materials?: CourseMaterial[];
 }
 
 export interface CourseSection {
   title: string;
   description?: string;
   subsections: CourseSubsection[];
+}
+
+export interface CourseMaterial {
+  title: string;
+  url: string;
 }
 
 export interface StudentCourse {
@@ -95,9 +101,21 @@ export interface Announcement {
   updatedAt: string;
 }
 
+export interface AnnouncementEmailDelivery {
+  enabled: boolean;
+  attempted: number;
+  sent: number;
+  failed: number;
+}
+
 export interface CreateAnnouncementInput {
   title: string;
   message: string;
+}
+
+export interface CreateAnnouncementResponse {
+  announcement: Announcement;
+  emailDelivery: AnnouncementEmailDelivery;
 }
 
 export interface StudentAdminMessage {
@@ -122,4 +140,56 @@ export interface AdminInboxMessage {
 export interface CreateAdminMessageInput {
   subject: string;
   message: string;
+}
+
+export interface AdminCohort {
+  id: string;
+  name: string;
+  description?: string;
+  inviteCode: string;
+  inviteLink: string;
+  courseIds: string[];
+  memberCount: number;
+  createdAt: string;
+  updatedAt: string;
+  accessKey?: string;
+}
+
+export interface StudentCohort {
+  id: string;
+  name: string;
+  description?: string;
+  inviteCode: string;
+  courseIds: string[];
+  joinedAt: string;
+  joinedBy: 'link' | 'key';
+}
+
+export interface CreateCohortInput {
+  name: string;
+  description?: string;
+  courseIds?: string[];
+}
+
+export interface UpdateCohortInput {
+  name?: string;
+  description?: string;
+  courseIds?: string[];
+}
+
+export interface CohortJoinResult {
+  message: string;
+  alreadyMember: boolean;
+  allocatedCourses: number;
+  cohort: {
+    id: string;
+    name: string;
+    description?: string;
+    inviteCode: string;
+  };
+}
+
+export interface RotateCohortKeyResult {
+  cohortId: string;
+  accessKey: string;
 }

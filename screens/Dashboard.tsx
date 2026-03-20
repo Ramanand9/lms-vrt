@@ -1,12 +1,69 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ApiError, API } from '../services/db';
 import { useLMS } from '../store';
-import { UserRole } from '../types';
+import { StudentCohort, UserRole } from '../types';
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Request failed';
+};
+
+const extractInviteCode = (input: string): string | null => {
+  const trimmed = input.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^COH-[A-Z0-9-]+$/i.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const fromQuery = parsed.searchParams.get('cohortInvite');
+    if (fromQuery && /^COH-[A-Z0-9-]+$/i.test(fromQuery.trim())) {
+      return fromQuery.trim().toUpperCase();
+    }
+
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    const candidate = segments[segments.length - 1];
+    if (candidate && /^COH-[A-Z0-9-]+$/i.test(candidate.trim())) {
+      return candidate.trim().toUpperCase();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
+const formatDate = (value: string): string =>
+  new Date(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
 const Dashboard: React.FC = () => {
-  const { currentUser, courses } = useLMS();
+  const { currentUser, courses, refreshData } = useLMS();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [myCohorts, setMyCohorts] = useState<StudentCohort[]>([]);
+  const [cohortInput, setCohortInput] = useState('');
+  const [isCohortLoading, setIsCohortLoading] = useState(false);
+  const [isJoiningCohort, setIsJoiningCohort] = useState(false);
+  const [cohortError, setCohortError] = useState<string | null>(null);
+  const [cohortNotice, setCohortNotice] = useState<string | null>(null);
 
   const isAdmin = currentUser?.role === UserRole.ADMIN;
 
@@ -24,6 +81,81 @@ const Dashboard: React.FC = () => {
     );
   }, [courses, searchQuery]);
 
+  useEffect(() => {
+    if (isAdmin || !currentUser) {
+      setMyCohorts([]);
+      return;
+    }
+
+    const loadCohorts = async () => {
+      setIsCohortLoading(true);
+      setCohortError(null);
+
+      try {
+        const cohorts = await API.fetchMyCohorts();
+        setMyCohorts(cohorts);
+      } catch (loadError) {
+        setCohortError(getErrorMessage(loadError));
+      } finally {
+        setIsCohortLoading(false);
+      }
+    };
+
+    void loadCohorts();
+  }, [currentUser, isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      return;
+    }
+
+    const queryCode = new URLSearchParams(window.location.search).get(
+      'cohortInvite',
+    );
+    if (queryCode) {
+      setCohortInput(queryCode);
+    }
+  }, [isAdmin]);
+
+  const handleJoinCohort = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setCohortError(null);
+    setCohortNotice(null);
+
+    const normalizedInput = cohortInput.trim();
+    if (!normalizedInput) {
+      setCohortError('Enter a cohort invite link/code or access key.');
+      return;
+    }
+
+    setIsJoiningCohort(true);
+
+    try {
+      const inviteCode = extractInviteCode(normalizedInput);
+      const response = inviteCode
+        ? await API.joinCohortByInviteCode(inviteCode)
+        : await API.joinCohortByKey(normalizedInput);
+
+      const allocationMessage =
+        response.allocatedCourses > 0
+          ? `${response.allocatedCourses} course${
+              response.allocatedCourses > 1 ? 's were' : ' was'
+            } unlocked.`
+          : 'No new courses were unlocked.';
+
+      setCohortNotice(`${response.message} ${allocationMessage}`);
+      setCohortInput('');
+
+      await refreshData();
+      const cohorts = await API.fetchMyCohorts();
+      setMyCohorts(cohorts);
+    } catch (joinError) {
+      setCohortError(getErrorMessage(joinError));
+    } finally {
+      setIsJoiningCohort(false);
+    }
+  };
+
   return (
     <div className="space-y-12 animate-fadeIn pb-12">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -33,7 +165,7 @@ const Dashboard: React.FC = () => {
           </h1>
           <p className="text-slate-500 mt-1 font-medium">
             {isAdmin
-              ? 'Manage courses and allocations from the Admin route.'
+              ? 'Use Course Admin and Access Admin for management tasks.'
               : 'These are the courses allocated to your account.'}
           </p>
         </div>
@@ -52,6 +184,71 @@ const Dashboard: React.FC = () => {
         </div>
       </header>
 
+      {!isAdmin && (
+        <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8">
+          <h2 className="text-2xl font-black text-slate-900">Join Cohort</h2>
+          <p className="text-sm text-slate-500 mt-2 font-medium">
+            Paste a cohort invite link/code or enter the special access key.
+          </p>
+
+          <form onSubmit={handleJoinCohort} className="mt-5 flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              value={cohortInput}
+              onChange={(event) => setCohortInput(event.target.value)}
+              placeholder="https://.../?cohortInvite=COH-XXXX or KEY-XXXX"
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-sm"
+            />
+            <button
+              type="submit"
+              disabled={isJoiningCohort}
+              className="px-5 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-nitrocrimson-600 disabled:opacity-50"
+            >
+              {isJoiningCohort ? 'Joining...' : 'Join Cohort'}
+            </button>
+          </form>
+
+          {(cohortError || cohortNotice) && (
+            <div
+              className={`mt-4 rounded-xl px-4 py-3 text-sm font-bold ${
+                cohortError
+                  ? 'bg-red-50 border border-red-100 text-red-600'
+                  : 'bg-green-50 border border-green-100 text-green-700'
+              }`}
+            >
+              {cohortError ?? cohortNotice}
+            </div>
+          )}
+
+          <div className="mt-6">
+            <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">
+              My Cohorts
+            </p>
+            {isCohortLoading ? (
+              <p className="text-sm text-slate-500">Loading cohorts...</p>
+            ) : myCohorts.length === 0 ? (
+              <p className="text-sm text-slate-500">You have not joined any cohort yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {myCohorts.map((cohort) => (
+                  <div
+                    key={cohort.id}
+                    className="bg-slate-50 border border-slate-200 rounded-xl p-3"
+                  >
+                    <p className="text-sm font-black text-slate-900">{cohort.name}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Joined {formatDate(cohort.joinedAt)} via {cohort.joinedBy} |{' '}
+                      {cohort.courseIds.length} course
+                      {cohort.courseIds.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {filteredCourses.length === 0 ? (
         <div className="bg-white rounded-[3rem] p-20 text-center border-2 border-dashed border-slate-100 shadow-inner">
           <div className="bg-slate-50 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm">
@@ -65,7 +262,7 @@ const Dashboard: React.FC = () => {
               ? 'Try a different keyword.'
               : isAdmin
                 ? 'Go to Admin and create your first course.'
-                : 'Ask your admin to allocate a course to your account.'}
+                : 'Join a cohort or ask your admin to allocate a course.'}
           </p>
         </div>
       ) : (

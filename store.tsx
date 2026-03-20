@@ -33,12 +33,18 @@ interface LMSContextType {
     password: string,
     setupKey: string,
   ) => Promise<ActionResult>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<ActionResult>;
   updateProfilePicture: (avatar: string) => Promise<ActionResult>;
   logout: () => void;
   refreshData: () => Promise<void>;
   createCourse: (input: CreateCourseInput) => Promise<ActionResult>;
   updateCourse: (courseId: string, input: UpdateCourseInput) => Promise<ActionResult>;
+  deleteCourse: (courseId: string) => Promise<ActionResult>;
   allocateCourse: (courseId: string, studentId: string) => Promise<ActionResult>;
+  revokeCourseAccess: (courseId: string, studentId: string) => Promise<ActionResult>;
   fetchCourseStudents: (courseId: string) => Promise<CourseStudent[]>;
   fetchCourseView: (courseId: string) => Promise<CourseView | null>;
 }
@@ -213,6 +219,26 @@ export const LMSProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<ActionResult> => {
+    if (!currentUser) {
+      return { success: false, message: 'You must be logged in' };
+    }
+
+    setIsSaving(true);
+
+    try {
+      const response = await API.changePassword(currentPassword, newPassword);
+      return { success: true, message: response.message };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const logout = () => {
     API.clearToken();
     setCurrentUser(null);
@@ -279,6 +305,28 @@ export const LMSProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const deleteCourse = async (courseId: string): Promise<ActionResult> => {
+    if (currentUser?.role !== UserRole.ADMIN) {
+      return { success: false, message: 'Only admins can delete courses' };
+    }
+
+    setIsSaving(true);
+
+    try {
+      await API.deleteCourse(courseId);
+      setCourses((prev) => prev.filter((course) => course.id !== courseId));
+      setCourseStudentsCache((prev) => {
+        const { [courseId]: _removed, ...rest } = prev;
+        return rest;
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const allocateCourse = async (
     courseId: string,
     studentId: string,
@@ -291,6 +339,32 @@ export const LMSProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       await API.allocateCourse({ courseId, studentId });
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const revokeCourseAccess = async (
+    courseId: string,
+    studentId: string,
+  ): Promise<ActionResult> => {
+    if (currentUser?.role !== UserRole.ADMIN) {
+      return { success: false, message: 'Only admins can revoke course access' };
+    }
+
+    setIsSaving(true);
+
+    try {
+      await API.unallocateCourse(courseId, studentId);
+      setCourseStudentsCache((prev) => ({
+        ...prev,
+        [courseId]: (prev[courseId] ?? []).filter(
+          (entry) => entry.student.id !== studentId,
+        ),
+      }));
       return { success: true };
     } catch (error) {
       return { success: false, message: getErrorMessage(error) };
@@ -347,12 +421,15 @@ export const LMSProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         registerStudent,
         registerAdmin,
+        changePassword,
         updateProfilePicture,
         logout,
         refreshData,
         createCourse,
         updateCourse,
+        deleteCourse,
         allocateCourse,
+        revokeCourseAccess,
         fetchCourseStudents,
         fetchCourseView,
       }}

@@ -1,15 +1,22 @@
 import {
+  AdminCohort,
   AdminInboxMessage,
   AllocateCourseInput,
   Announcement,
   AuthResponse,
+  CohortJoinResult,
   Course,
   CourseStudent,
+  CreateCohortInput,
   CreateAdminMessageInput,
   CreateAnnouncementInput,
+  CreateAnnouncementResponse,
   CreateCourseInput,
+  RotateCohortKeyResult,
+  StudentCohort,
   StudentCourse,
   StudentAdminMessage,
+  UpdateCohortInput,
   UpdateCourseInput,
   User,
 } from '../types';
@@ -127,6 +134,16 @@ class LMSApiClient {
     return this.request<User>('/auth/me');
   }
 
+  changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
   updateProfilePicture(avatar: string): Promise<User> {
     return this.request<User>('/users/profile-picture', {
       method: 'PATCH',
@@ -156,6 +173,17 @@ class LMSApiClient {
     });
   }
 
+  deleteCourse(
+    courseId: string,
+  ): Promise<{ message: string; courseId: string }> {
+    return this.request<{ message: string; courseId: string }>(
+      `/courses/${courseId}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  }
+
   fetchStudents(): Promise<User[]> {
     return this.request<User[]>('/users/students');
   }
@@ -181,14 +209,26 @@ class LMSApiClient {
     );
   }
 
+  unallocateCourse(
+    courseId: string,
+    studentId: string,
+  ): Promise<{ message: string; courseId: string; studentId: string }> {
+    return this.request<{ message: string; courseId: string; studentId: string }>(
+      `/enrollments/course/${courseId}/student/${studentId}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  }
+
   fetchAnnouncements(): Promise<Announcement[]> {
     return this.request<Announcement[]>('/community/announcements');
   }
 
   createAnnouncement(
     input: CreateAnnouncementInput,
-  ): Promise<Announcement> {
-    return this.request<Announcement>('/community/announcements', {
+  ): Promise<CreateAnnouncementResponse> {
+    return this.request<CreateAnnouncementResponse>('/community/announcements', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -209,6 +249,53 @@ class LMSApiClient {
 
   fetchAdminMessages(): Promise<AdminInboxMessage[]> {
     return this.request<AdminInboxMessage[]>('/community/messages');
+  }
+
+  fetchAdminCohorts(): Promise<AdminCohort[]> {
+    return this.request<AdminCohort[]>('/cohorts');
+  }
+
+  createCohort(input: CreateCohortInput): Promise<AdminCohort> {
+    return this.request<AdminCohort>('/cohorts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  updateCohort(
+    cohortId: string,
+    input: UpdateCohortInput,
+  ): Promise<AdminCohort> {
+    return this.request<AdminCohort>(`/cohorts/${cohortId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+  }
+
+  rotateCohortKey(cohortId: string): Promise<RotateCohortKeyResult> {
+    return this.request<RotateCohortKeyResult>(`/cohorts/${cohortId}/rotate-key`, {
+      method: 'POST',
+    });
+  }
+
+  fetchMyCohorts(): Promise<StudentCohort[]> {
+    return this.request<StudentCohort[]>('/cohorts/my');
+  }
+
+  joinCohortByInviteCode(inviteCode: string): Promise<CohortJoinResult> {
+    return this.request<CohortJoinResult>(
+      `/cohorts/join/invite/${encodeURIComponent(inviteCode)}`,
+      {
+        method: 'POST',
+      },
+    );
+  }
+
+  joinCohortByKey(accessKey: string): Promise<CohortJoinResult> {
+    return this.request<CohortJoinResult>('/cohorts/join/key', {
+      method: 'POST',
+      body: JSON.stringify({ accessKey }),
+    });
   }
 }
 

@@ -1,7 +1,13 @@
+export interface CourseMaterialResponse {
+  title: string;
+  url: string;
+}
+
 export interface CourseSubsectionResponse {
   title: string;
   description?: string;
   videoUrl: string;
+  materials: CourseMaterialResponse[];
 }
 
 export interface CourseSectionResponse {

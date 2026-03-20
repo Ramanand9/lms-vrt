@@ -142,6 +142,10 @@ export class CoursesService {
         title: subsection.title.trim(),
         description: this.toOptionalTrimmedString(subsection.description),
         videoUrl: subsection.videoUrl.trim(),
+        materials: (subsection.materials ?? []).map((material) => ({
+          title: material.title.trim(),
+          url: material.url.trim(),
+        })),
       })),
     }));
   }
@@ -160,6 +164,10 @@ export class CoursesService {
         title: subsection.title,
         description: subsection.description,
         videoUrl: subsection.videoUrl,
+        materials: (subsection.materials ?? []).map((material) => ({
+          title: material.title,
+          url: material.url,
+        })),
       })),
     }));
   }

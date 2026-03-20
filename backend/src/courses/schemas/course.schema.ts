@@ -3,6 +3,19 @@ import { HydratedDocument, Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
 
 @Schema({ _id: false, versionKey: false })
+export class CourseSubsectionMaterial {
+  @Prop({ required: true, trim: true, maxlength: 150 })
+  title: string;
+
+  @Prop({ required: true, trim: true, maxlength: 2048 })
+  url: string;
+}
+
+export const CourseSubsectionMaterialSchema = SchemaFactory.createForClass(
+  CourseSubsectionMaterial,
+);
+
+@Schema({ _id: false, versionKey: false })
 export class CourseSubsection {
   @Prop({ required: true, trim: true, maxlength: 150 })
   title: string;
@@ -12,6 +25,9 @@ export class CourseSubsection {
 
   @Prop({ required: true, trim: true, maxlength: 2048 })
   videoUrl: string;
+
+  @Prop({ type: [CourseSubsectionMaterialSchema], default: [] })
+  materials: CourseSubsectionMaterial[];
 }
 
 export const CourseSubsectionSchema =

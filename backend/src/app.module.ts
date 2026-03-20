@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CommunityModule } from './community/community.module';
+import { CohortsModule } from './cohorts/cohorts.module';
 import { CoursesModule } from './courses/courses.module';
 import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { UsersModule } from './users/users.module';
@@ -28,6 +29,7 @@ import { UsersModule } from './users/users.module';
     CoursesModule,
     EnrollmentsModule,
     CommunityModule,
+    CohortsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

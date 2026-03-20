@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLMS } from '../store';
-import { CourseStudent, CourseView, UserRole } from '../types';
+import { CourseMaterial, CourseStudent, CourseView, UserRole } from '../types';
 
 type VideoSource = {
   kind: 'file' | 'embed' | 'external';
@@ -15,6 +15,7 @@ type SelectedLesson = {
   title: string;
   description?: string;
   videoUrl: string;
+  materials: CourseMaterial[];
 };
 
 const DIRECT_VIDEO_FILE_PATTERN = /\.(mp4|webm|ogg|mov|m4v|m3u8)(\?.*)?$/i;
@@ -29,6 +30,28 @@ const formatDate = (value: string | undefined) => {
     day: 'numeric',
     year: 'numeric',
   });
+};
+
+const getMaterialTypeLabel = (url: string): string => {
+  const lower = url.toLowerCase();
+
+  if (lower.includes('.pdf')) {
+    return 'PDF';
+  }
+
+  if (lower.includes('.docx') || lower.includes('.doc')) {
+    return 'DOC';
+  }
+
+  if (lower.includes('.pptx') || lower.includes('.ppt')) {
+    return 'PPT';
+  }
+
+  if (lower.includes('.xlsx') || lower.includes('.xls')) {
+    return 'XLS';
+  }
+
+  return 'DOC';
 };
 
 const getYouTubeVideoId = (url: URL): string | null => {
@@ -214,6 +237,7 @@ const CoursePlayer: React.FC = () => {
         title: firstSubsection.title,
         description: firstSubsection.description,
         videoUrl: firstSubsection.videoUrl,
+        materials: firstSubsection.materials ?? [],
       });
       return;
     }
@@ -378,6 +402,29 @@ const CoursePlayer: React.FC = () => {
                             {selectedLesson.description}
                           </p>
                         )}
+                        {selectedLesson.materials.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                              PDF and Docs
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedLesson.materials.map((material, index) => (
+                                <a
+                                  key={`selected-material-${index}`}
+                                  href={material.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-white"
+                                >
+                                  <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white">
+                                    {getMaterialTypeLabel(material.url)}
+                                  </span>
+                                  <span>{material.title}</span>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -457,6 +504,32 @@ const CoursePlayer: React.FC = () => {
                                   </p>
                                 )}
 
+                                {(subsection.materials ?? []).length > 0 && (
+                                  <div className="mt-3 space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                      PDF and Docs
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {(subsection.materials ?? []).map(
+                                        (material, materialIndex) => (
+                                          <a
+                                            key={`lesson-material-${sectionIndex}-${subsectionIndex}-${materialIndex}`}
+                                            href={material.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-800 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200"
+                                          >
+                                            <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white">
+                                              {getMaterialTypeLabel(material.url)}
+                                            </span>
+                                            <span>{material.title}</span>
+                                          </a>
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
                                 <div className="mt-3 flex items-center gap-2">
                                   <button
                                     type="button"
@@ -468,6 +541,7 @@ const CoursePlayer: React.FC = () => {
                                         title: subsection.title,
                                         description: subsection.description,
                                         videoUrl: subsection.videoUrl,
+                                        materials: subsection.materials ?? [],
                                       })
                                     }
                                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-nitrocrimson-600"

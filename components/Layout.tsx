@@ -23,7 +23,8 @@ const Layout: React.FC = () => {
   const navItems: NavItem[] = isAdmin
     ? [
         { to: '/', label: 'Courses', icon: 'fa-book-open' },
-        { to: '/admin', label: 'Admin', icon: 'fa-shield' },
+        { to: '/admin/courses', label: 'Course Admin', icon: 'fa-pen-ruler' },
+        { to: '/admin/access', label: 'Access Admin', icon: 'fa-user-shield' },
         { to: '/community', label: 'Community', icon: 'fa-users' },
         { to: '/profile', label: 'Profile', icon: 'fa-user-circle' },
       ]

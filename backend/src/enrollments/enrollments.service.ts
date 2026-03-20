@@ -241,6 +241,10 @@ export class EnrollmentsService {
         title: subsection.title,
         description: subsection.description,
         videoUrl: subsection.videoUrl,
+        materials: (subsection.materials ?? []).map((material) => ({
+          title: material.title,
+          url: material.url,
+        })),
       })),
     }));
   }
